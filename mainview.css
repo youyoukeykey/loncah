@@ -1,0 +1,22 @@
+.content{
+ width:80%;
+ margin-left:20%;
+ background-repeat: repeat;
+ background-image: url("./michaelname.jpg");
+}
+.leftarea{
+    width:40%;
+}
+.rightarea{
+    width:60%;
+}
+.maininfo{
+    display: flex;
+}  
+.h1{
+    text-align: center;
+}
+.righttop{
+    font-weight: bold;
+    text-align: center;
+}
