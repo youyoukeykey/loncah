@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコードリーダー</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        #video {
+            max-width: 100%;
+            border: 1px solid #ccc;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+        }
+        #history {
+            margin-top: 20px;
+            text-align: left;
+        }
+        #clearHistory {
+            margin-top: 10px;
+            padding: 5px 10px;
+            background-color: #ff4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>QRコードリーダー</h1>
+    <video id="video" playsinline></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <div id="output"></div>
+    
+    <div id="history">
+        <h2>スキャン履歴</h2>
+        <ul id="historyList"></ul>
+        <button id="clearHistory">履歴をクリア</button>
+    </div>
+
+    <script>
+        (function() {
+            var video = document.getElementById('video');
+            var canvas = document.getElementById('canvas');
+            var ctx = canvas.getContext('2d');
+            var output = document.getElementById('output');
+            var historyList = document.getElementById('historyList');
+            var clearHistoryBtn = document.getElementById('clearHistory');
+
+            // ローカルストレージから履歴を取得
+            var scanHistory = JSON.parse(localStorage.getItem('qrScanHistory')) || [];
+
+            // 初期表示時に履歴を更新
+            updateHistoryList();
+
+            // カメラの起動
+            function startCamera() {
+                navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' } 
+                })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.setAttribute('playsinline', true);
+                    video.play();
+                    requestAnimationFrame(tick);
+                })
+                .catch(function(err) {
+                    console.error('カメラの起動に失敗:', err);
+                });
+            }
+
+            // QRコードのスキャン
+            function tick() {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.height = video.videoHeight;
+                    canvas.width = video.videoWidth;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var code = jsQR(imageData.data, imageData.width, imageData.height);
+                    
+                    if (code) {
+                        // 新しいQRコードの場合のみ処理
+                        if (scanHistory.indexOf(code.data) === -1) {
+                            output.textContent = 'スキャン結果: ' + code.data;
+                            scanHistory.push(code.data);
+                            updateHistoryList();
+                            
+                            // ローカルストレージに保存
+                            localStorage.setItem('qrScanHistory', JSON.stringify(scanHistory));
+                        }
+                    }
+                }
+                requestAnimationFrame(tick);
+            }
+
+            // 履歴の更新
+            function updateHistoryList() {
+                historyList.innerHTML = '';
+                scanHistory.forEach(function(item) {
+                    var li = document.createElement('li');
+                    li.textContent = item;
+                    historyList.appendChild(li);
+                });
+            }
+
+            // 履歴のクリア
+            clearHistoryBtn.addEventListener('click', function() {
+                scanHistory = [];
+                updateHistoryList();
+                output.textContent = '';
+                
+                // ローカルストレージから履歴を削除
+                localStorage.removeItem('qrScanHistory');
+            });
+
+            // ページ読み込み時にカメラを起動
+            startCamera();
+        })();
+    </script>
+</body>
+</html>
